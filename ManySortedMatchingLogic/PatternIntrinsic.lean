@@ -591,12 +591,13 @@ inductive IsAppSymbol : ∀ {s : PSort 𝓢}, Pattern sgn s → Prop where
 
 def AppContext (sgn : Signature 𝓢) (s t : 𝓢) := Pattern sgn (.base s) → {φ : Pattern sgn (.base t) // IsAppSymbol φ}
 
--- structure AppContext (sgn : Signature 𝓢) (s t : 𝓢) where
---   box : SVar
---   pattern : Pattern sgn t
---   app_symbol : IsAppSymbol pattern
---   is_linear : pattern.countSVar box = 1
+structure AppContext' (sgn : Signature 𝓢) (s t : 𝓢) where
+  box : SVar
+  pattern : Pattern sgn t
+  app_symbol : IsAppSymbol pattern
+  is_linear : pattern.countSVar box = 1
 
+-- def AppContext (sgn : Signature 𝓢) (s t : 𝓢) := {f : Pattern sgn (.base s) → Pattern sgn (.base t) // ∃ A : AppContext' sgn s t, ∀ φ, f φ = A.pattern.substSVar A.box φ}
 
 def AppContext.insert {sgn : Signature 𝓢} {s t : 𝓢} (C : AppContext sgn s t) (φ : Pattern sgn (.base s)) : Pattern sgn (.base t) :=
   C φ |>.1

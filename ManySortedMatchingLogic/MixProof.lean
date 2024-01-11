@@ -1,4 +1,4 @@
-import ManySortedMatchingLogic.PatternIntrinsic
+import ManySortedMatchingLogic.MixPattern
 
 set_option autoImplicit false
 
@@ -6,13 +6,11 @@ open Classical
 
 open Pattern
 
-variable {𝓢 : Type} [DecidableEq 𝓢]
-variable {sgn : Signature 𝓢}
+variable {Symbol S : Type} [DecidableEq S] {sgn : Signature Symbol S}
 
+abbrev Premises (sgn : Signature Symbol S) := Set <| Σ s : S, WSPattern sgn s
 
-abbrev Premises {𝓢 : Type} (sgn : Signature 𝓢) := Set <| Σ s : 𝓢, Pattern sgn (.base s)
-
-inductive Proof (Γ : Premises sgn) : {s : 𝓢} → Pattern sgn (.base s) → Type _ where
+inductive Proof (Γ : Premises sgn) : {s : S} → WSPattern sgn s → Type _ where
 | premise {φ} : ⟨_, φ⟩ ∈ Γ →
   Proof Γ φ
 | modusPonens {φ ψ} :

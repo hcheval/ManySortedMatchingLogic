@@ -1,3 +1,4 @@
+import ManySortedMatchingLogic.ProofIntrinsic
 import ManySortedMatchingLogic.Definedness
 
 variable {𝓢 : Type} [DecidableEq 𝓢]
@@ -70,8 +71,7 @@ set_option pp.all false
 
 
 
-
-
+example {α β : Type} (a : α) (b : β) (h : HEq a b) ()
 #check heq_eq_eq
 -- open Classical in
 noncomputable def deductionTheorem {Γ : Premises sgn} {s s' : 𝓢} {φ : Pattern sgn s} {ψ : Pattern sgn s'}
@@ -80,15 +80,15 @@ noncomputable def deductionTheorem {Γ : Premises sgn} {s s' : 𝓢} {φ : Patte
   (no_kt : ¬proof.usesKnasterTarski)
   : Γ ⊢ ⌊ψ⌋ ⇒ φ :=
   match proof with
--- | premise hmem =>
--- if hmem_φ_Γ : ⟨_, φ⟩ ∈ Γ then
---     let p₁ : Γ ⊢ φ := .premise hmem_φ_Γ
---     (extraPremise) p₁
---   else
---     have h_φ_eq_ψ : HEq φ ψ := by aesop
---     let l : Γ ⊢ ⌊ψ⌋ ⇒ ψ := (totalImpl)
---     have : HEq (⌊ψ⌋ ⇒ φ) (⌊ψ⌋ ⇒ ψ) := by sorry
---     sorry
+| premise hmem =>
+if hmem_φ_Γ : ⟨_, φ⟩ ∈ Γ then
+    let p₁ : Γ ⊢ φ := .premise hmem_φ_Γ
+    (extraPremise) p₁
+  else
+    have h_φ_eq_ψ : HEq φ ψ := by aesop
+    let l : Γ ⊢ ⌊ψ⌋ ⇒ ψ := (totalImpl)
+    have : HEq (⌊ψ⌋ ⇒ φ) (⌊ψ⌋ ⇒ ψ) := by sorry
+    sorry
 | existQuan sfi => extraPremise (existQuan sfi)
 | existence => extraPremise existence
 | singleton => extraPremise <| singleton

@@ -622,6 +622,9 @@ theorem AppContext.insert_not_free_evar_mpr {x : EVar S} {C : AppContext sgn} {�
     . simp_all
 
 
+def WSPattern (sgn : Signature Symbol S) (s : S) : Type := {φ : Pattern sgn // φ.WellSorted s}
+
+def WSAppContext (sgn : Signature Symbol S) (s t : S) : Type := {C : AppContext sgn // C.holeSort = s ∧ C.target = t}
 
 inductive NestedContext (sgn : Signature Symbol S) where
 | empty (source : S) : NestedContext sgn
