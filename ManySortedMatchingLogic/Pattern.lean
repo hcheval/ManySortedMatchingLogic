@@ -13,9 +13,10 @@ structure SVar (S : Type) where
   deriving DecidableEq
 
 structure Signature (Symbol : Type) (S : Type) where
-  domain : Symbol → (Nat → S)
+  arity : Symbol → Nat
+  domain : (σ : Symbol) → (Fin (arity σ) → S)
   target : Symbol → S
-  arity : Nat
+
 
 -- structure Context (S : Type) where
 --   evar : EVar → S
@@ -39,7 +40,7 @@ inductive Pattern {Symbol : Type} {S : Type} (sgn : Signature Symbol S) : Type w
 | evar : EVar S → Pattern sgn
 | svar : SVar S → Pattern sgn
 | implication : Pattern sgn → Pattern sgn → Pattern sgn
-| application : Symbol → (Nat → Pattern sgn) → Pattern sgn
+| application : (σ : Symbol) → (Fin (sgn.arity σ) → Pattern sgn) → Pattern sgn
 | existential : EVar S → Pattern sgn → Pattern sgn
 | mu : SVar S → Pattern sgn → Pattern sgn
 | bottom : Pattern sgn
@@ -172,6 +173,14 @@ section
     | μ Y φ' => X ≠ Y ∧ FreeSVar X φ'
     | ⊥ => False
 
+  theorem not_free_svar_implication {X : SVar S} {φ ψ : Pattern sgn} : ¬(φ ⇒ ψ).FreeSVar X ↔ ¬φ.FreeSVar X ∧ ¬ψ.FreeSVar X := by
+    simp only [FreeSVar]; tauto
+
+  theorem not_free_svar_application {X : SVar S} {σ : Symbol} {φ : Fin (sgn.arity σ) → Pattern sgn} : ¬(σ ⬝ φ).FreeSVar X ↔ (∀ i, ¬(φ i).FreeSVar X) := by
+    simp
+
+  theorem not_free_svar_mu {X : SVar S} {Y : SVar S} {φ : Pattern sgn} : ¬(μ Y φ).FreeSVar X ↔ X ≠ Y → ¬φ.FreeSVar X := by simp
+
   def svarCount (φ : Pattern sgn) (X : SVar S) : Nat := sorry
 
   open Classical in
@@ -201,6 +210,11 @@ section
     | σ ⬝ args => ∀ i, SubstitutableSVarForIn X χ (args i)
     | φ₁ ⇒ φ₂ => SubstitutableSVarForIn X χ φ₁ ∧ SubstitutableSVarForIn X χ φ₂
     | _ => True
+
+  theorem substitutable_svar_implication {X : SVar S} {χ φ ψ : Pattern sgn} : SubstitutableSVarForIn X χ (φ ⇒ ψ) ↔ SubstitutableSVarForIn X χ φ ∧ SubstitutableSVarForIn X χ ψ := by
+    simp
+
+
 
   end Pattern
 end
@@ -305,7 +319,8 @@ section SubstitutabilityProofs
     intros h
     by_cases h' : (μ Y φ).FreeSVar X
     . intros
-      aesop?
+      rename_i inst a
+      simp_all only [ne_eq, FreeSVar, not_false_eq_true, true_and, SubstitutableSVarForIn, and_self, ite_true]
       -- simp_all only [ne_eq, isFreeSvar, ite_false, substitutableForSvarIn, Bool.not_eq_true, Bool.decide_and,
       --   Bool.decide_coe, ite_true, Bool.and_eq_true, decide_eq_true_eq]
     . induction φ with
@@ -325,27 +340,22 @@ section SubstitutabilityProofs
           . simp [*] at *
             simp [*] at *
           . simp [*] at *
-      | implication φ₁ φ₂ ih₁ =>
-        -- simp? [*] at *
-
-        -- specialize ih₁ h'.1
-        -- specialize ih₂ h'.2
-        by_cases hfv : FreeSVar X ψ
-        . rename_i s_1
-          intro a
-          aesop?
-          -- apply And.intro
-          -- · apply ih₁
-          --   apply Aesop.BuiltinRules.not_intro
-          --   intro a
-          --   simp_all only [not_true, implies_true, SubstitutableSVarForIn._eq_5, IsEmpty.forall_iff, true_or]
-          -- · apply ih₂
-          --   apply Aesop.BuiltinRules.not_intro
-          --   intro a
-          --   simp_all only [not_true, implies_true, SubstitutableSVarForIn._eq_5, IsEmpty.forall_iff, or_true]
-        . aesop
+      | implication φ₁ φ₂ ih₁ ih₂ =>
+        rw [not_free_svar_mu] at *
+        rw [not_free_svar_implication] at h'
+        specialize h' h
+        specialize ih₁ (fun _ => h'.1)
+        specialize ih₂ (fun _ => h'.2)
+        simp_all
       | application σ φ ih =>
-        aesop?
+        intros h''
+        rw [not_free_svar_mu, not_free_svar_application] at h'
+        simp_rw [not_free_svar_mu] at ih
+        intros i
+        specialize h' h i
+        specialize ih i (fun _ => h')
+        simp_all
+
       | existential x φ' ih =>
         -- simp only [*, substitutableForSvarIn, isFreeSvar, ite_false, Bool.not_eq_true, Bool.decide_and, Bool.decide_coe,
         --   ite_eq_right_iff, Bool.and_eq_true, decide_eq_true_eq, h] at *
@@ -411,8 +421,14 @@ section WellSortednessProofs
     . intros h ; cases h ; aesop
     . intros h ; constructor <;> aesop
 
+  -- @[simp]
+  -- lemma well_sorted_disjunction {φ ψ : Pattern sgn} {s} : WellSorted (φ ⋁ ψ) s ↔ WellSorted φ s ∧ WellSorted ψ s := by
+  --   constructor
+  --   . intros h ; cases h ; aesop
+  --   . intros h ; constructor <;> aesop
+
   @[simp]
-  lemma well_sorted_application {σ : Symbol} {args : Nat → Pattern sgn} {s : S} : WellSorted (σ ⬝ args) s ↔ ∀ i, WellSorted (args i) (sgn.domain σ i) := by
+  lemma well_sorted_application {σ : Symbol} {args : Fin (sgn.arity σ) → Pattern sgn} {s : S} : WellSorted (σ ⬝ args) s ↔ ∀ i, WellSorted (args i) (sgn.domain σ i) := by
     constructor
     . intros h ; intros i ; cases h ; aesop
     . intros h ; constructor ; assumption
@@ -475,7 +491,7 @@ section WellSortednessProofs
       specialize @ih _ h
       assumption
     | bottom =>
-      simpa
+      simp
 
   lemma subst_svar_well_sorted {φ : Pattern sgn} (X : SVar S) {χ : Pattern sgn} {s t : S} :
     WellSorted φ s →
@@ -532,7 +548,7 @@ mutual
     PositiveOcc X φ₁ → NegativeOcc X (φ₁ ⇒ φ₂)
   | implication_right {X} {φ₁ φ₂} :
     NegativeOcc X φ₂ → NegativeOcc X (φ₁ ⇒ φ₂)
-  | application {X} {σ} {φ : Nat → Pattern sgn} {i} :
+  | application {X} {σ} {φ : Fin (sgn.arity σ) → Pattern sgn} {i} :
     NegativeOcc X (φ i) → NegativeOcc X (σ ⬝ φ)
   | existential {X} {y} {φ} :
     NegativeOcc X φ → NegativeOcc X (∃∃ y φ)
@@ -546,7 +562,7 @@ mutual
     NegativeOcc X φ₁ → PositiveOcc X (φ₁ ⇒ φ₂)
   | implication_right {X} {φ₁ φ₂} :
     PositiveOcc X φ₂ → PositiveOcc X (φ₁ ⇒ φ₂)
-  | application {X} {σ} {φ : Nat → Pattern sgn} {i} :
+  | application {X} {σ} {φ : Fin (sgn.arity σ) → Pattern sgn} {i} :
     PositiveOcc X (φ i) → PositiveOcc X (σ ⬝ φ)
   | existential {X} {y} {φ} :
     PositiveOcc X φ → PositiveOcc X (∃∃ y φ)
@@ -561,9 +577,9 @@ end
 
 
 structure AppContext (sgn : Signature Symbol S) where
-  hole : ℕ
   symbol : Symbol
-  args : ℕ → Pattern sgn
+  hole : Fin (sgn.arity symbol)
+  args : Fin (sgn.arity symbol) → Pattern sgn
   args_well_sorted : ∀ i, i ≠ hole → Pattern.WellSorted (args i) (sgn.domain symbol i)
 
 def AppContext.holeSort (C : AppContext sgn) : S :=

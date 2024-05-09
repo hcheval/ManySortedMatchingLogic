@@ -9,7 +9,6 @@ open Pattern
 namespace Proof
 
 section ContextReasoning
-  namespace Proof
 
   variable {Γ : Set <| Pattern sgn}
   variable {s t : S}
@@ -122,6 +121,55 @@ section ContextReasoning
         apply AppContext.well_sorted_insert (s := Cσ.holeSort) rfl (by aesop)
       id (syllogism (s := t)) l₂ l₃
 
+-- @[simp] theorem stupid {φ : Pattern sgn} {s : S} : WellSorted φ s := sorry
+
+
+  def NestedContext.propagationDisjR.aux1
+    {s t : S}
+    {C' : NestedContext sgn} {Cσ : AppContext sgn} {φ ψ : Pattern sgn}
+    (wsφ : WellSorted φ s := by simp_all)
+    (wsψ : WellSorted ψ s := by simp_all)
+    -- (wsC : C.WellSorted t := by simp_all)
+    (compat : C'.holeSort = s)
+    (h₁ : C'.WellSorted Cσ.holeSort)
+  : Γ ⊢ C'[φ] ⋁ C'[ψ] ⇒ C'[φ ⋁ ψ] → Γ ⊢ (C'.nest Cσ)[φ] ⇒ (C'.nest Cσ)[φ ⋁ ψ] :=
+      fun l₁ =>
+      have : WellSorted (C'[φ]) Cσ.holeSort := by apply NestedContext.well_sorted_insert (s := s) C' φ (by simp_all) wsφ (by cases compat; simp_all)
+      have : WellSorted (C'[ψ]) Cσ.holeSort := by apply NestedContext.well_sorted_insert (s := s) C' (ψ) (by simp_all) (by simp_all) (by cases compat; simp_all)
+      have : WellSorted (C'[φ ⋁ ψ]) Cσ.holeSort := by apply NestedContext.well_sorted_insert (s := s) C' (φ ⋁ ψ) (by simp_all) (by simp_all) (by cases compat; simp_all)
+      let l₁' : Γ ⊢ C'[φ] ⇒ C'[φ] ⋁ C'[ψ] := disjIntroLeft (s := Cσ.holeSort)
+      let l₂ : Γ ⊢ C'[φ] ⇒ C'[φ ⋁ ψ] := (syllogism (s := Cσ.holeSort)) l₁' l₁
+      let l₃ : Γ ⊢ Cσ.insert (C'[φ]) ⇒ Cσ.insert (C'[φ ⋁ ψ]) := (Proof.framing (s := Cσ.holeSort) (wsψ := by aesop)) rfl l₂
+      let l₄ : Γ ⊢ (C'.nest Cσ)[φ] ⇒ (C'.nest Cσ)[φ ⋁ ψ] :=
+      by
+        rw [NestedContext.nest_insert]
+        rw [NestedContext.nest_insert]
+        exact l₃
+      l₄
+
+  def NestedContext.propagationDisjR.aux2
+    {s t : S}
+    {C' : NestedContext sgn} {Cσ : AppContext sgn} {φ ψ : Pattern sgn}
+    (wsφ : WellSorted φ s := by simp_all)
+    (wsψ : WellSorted ψ s := by simp_all)
+    -- (wsC : C.WellSorted t := by simp_all)
+    (compat : C'.holeSort = s)
+    (h₁ : C'.WellSorted Cσ.holeSort)
+  : Γ ⊢ C'[φ] ⋁ C'[ψ] ⇒ C'[φ ⋁ ψ] → Γ ⊢ (C'.nest Cσ)[ψ] ⇒ (C'.nest Cσ)[φ ⋁ ψ] :=
+      fun l₁ =>
+      have : WellSorted (C'[φ]) Cσ.holeSort := by apply NestedContext.well_sorted_insert (s := s) C' φ (by simp_all) wsφ (by cases compat; simp_all)
+      have : WellSorted (C'[ψ]) Cσ.holeSort := by apply NestedContext.well_sorted_insert (s := s) C' (ψ) (by simp_all) (by simp_all) (by cases compat; simp_all)
+      have : WellSorted (C'[φ ⋁ ψ]) Cσ.holeSort := by apply NestedContext.well_sorted_insert (s := s) C' (φ ⋁ ψ) (by simp_all) (by simp_all) (by cases compat; simp_all)
+      let l₁' : Γ ⊢ C'[ψ] ⇒ C'[φ] ⋁ C'[ψ] := disjIntroRight (s := Cσ.holeSort)
+      let l₂ : Γ ⊢ C'[ψ] ⇒ C'[φ ⋁ ψ] := (syllogism (s := Cσ.holeSort)) l₁' l₁
+      let l₃ : Γ ⊢ Cσ.insert (C'[ψ]) ⇒ Cσ.insert (C'[φ ⋁ ψ]) := (Proof.framing (s := Cσ.holeSort) (wsψ := by aesop)) rfl l₂
+      let l₄ : Γ ⊢ (C'.nest Cσ)[ψ] ⇒ (C'.nest Cσ)[φ ⋁ ψ] :=
+      by
+        rw [NestedContext.nest_insert]
+        rw [NestedContext.nest_insert]
+        exact l₃
+      l₄
+-- #exit
   def NestedContext.propagationDisjR
     {s t : S}
     {C : NestedContext sgn} {φ ψ : Pattern sgn}
@@ -134,28 +182,39 @@ section ContextReasoning
     match C with
     | .empty _ => implSelf (s := s)
     | .nest Cσ C' =>
-      let l₁ : Γ ⊢ C'[φ] ⋁ C'[ψ] ⇒ C'[φ ⋁ ψ] := (propagationDisjR (s := s) (t := Cσ.holeSort)
-        (wsC := by cases wsC; aesop)
-      ) (by cases compat; aesop)
-      have : WellSorted (C'[φ]) Cσ.holeSort := by cases wsC; apply NestedContext.well_sorted_insert (s := s) C' (φ) (by aesop) (by aesop) (by cases compat; simp)
-      have : WellSorted (C'[ψ]) Cσ.holeSort := by cases wsC; apply NestedContext.well_sorted_insert (s := s) C' (ψ) (by aesop) (by aesop) (by cases compat; simp)
-      have : WellSorted (C'[φ ⋁ ψ]) Cσ.holeSort := by cases wsC; apply NestedContext.well_sorted_insert (s := s) C' (φ ⋁ ψ) (by aesop) (by aesop) (by cases compat; simp)
-      let l₁' : Γ ⊢ C'[φ] ⇒ C'[φ] ⋁ C'[ψ] := disjIntroLeft (s := Cσ.holeSort)
-      let l₂ : Γ ⊢ C'[φ] ⇒ C'[φ ⋁ ψ] := (syllogism (s := Cσ.holeSort)) l₁' l₁
-      let l₃ : Γ ⊢ Cσ.insert (C'[φ]) ⇒ Cσ.insert (C'[φ ⋁ ψ]) := (Proof.framing (s := Cσ.holeSort) (wsψ := by aesop)) rfl l₂
-      let l₄ : Γ ⊢ (C'.nest Cσ)[φ] ⇒ (C'.nest Cσ)[φ ⋁ ψ] :=
-      by
+      have l₁ : Γ ⊢ C'[φ] ⋁ C'[ψ] ⇒ C'[φ ⋁ ψ] := (propagationDisjR (s := s) (t := Cσ.holeSort)
+        (wsC := by cases wsC; simp_all)
+      ) (by rw [← compat]; simp_all)
+      have : NestedContext.WellSorted C' (AppContext.holeSort Cσ) := by cases wsC; simp_all
+      have : WellSorted (C'[φ]) Cσ.holeSort := by cases wsC; apply NestedContext.well_sorted_insert (s := s) C' φ (by simp_all) wsφ (by cases compat; simp_all)
+      have : WellSorted (C'[ψ]) Cσ.holeSort := by cases wsC; apply NestedContext.well_sorted_insert (s := s) C' (ψ) (by simp_all) (by simp_all) (by cases compat; simp_all)
+      have : WellSorted (C'[φ ⋁ ψ]) Cσ.holeSort := by cases wsC; apply NestedContext.well_sorted_insert (s := s) C' (φ ⋁ ψ) (by simp_all) (by simp_all) (by cases compat; simp_all)
+      -- let l₁' : Γ ⊢ C'[φ] ⇒ C'[φ] ⋁ C'[ψ] := disjIntroLeft (s := Cσ.holeSort)
+      -- let l₂ : Γ ⊢ C'[φ] ⇒ C'[φ ⋁ ψ] := (syllogism (s := Cσ.holeSort)) l₁' l₁
+      -- let l₃ : Γ ⊢ Cσ.insert (C'[φ]) ⇒ Cσ.insert (C'[φ ⋁ ψ]) := (Proof.framing (s := Cσ.holeSort) (wsψ := by aesop)) rfl l₂
+      let l₄ : Γ ⊢ (C'.nest Cσ)[φ] ⇒ (C'.nest Cσ)[φ ⋁ ψ] := @NestedContext.propagationDisjR.aux1 _ _ _ _ _ s t _ _ _ _ wsφ wsψ (by rw [← compat]; simp) (by assumption) l₁
+      -- by
+      --   rw [NestedContext.nest_insert]
+      --   rw [NestedContext.nest_insert]
+      --   exact l₃
+      -- let l₂' : Γ ⊢ C'[ψ] ⇒ C'[φ ⋁ ψ] := (syllogism (s := Cσ.holeSort) (wsχ := by aesop)) (disjIntroRight (s := Cσ.holeSort)) l₁
+      -- let l₃' : Γ ⊢ Cσ.insert (C'[ψ]) ⇒ Cσ.insert (C'[φ ⋁ ψ]) := (Proof.framing (s := Cσ.holeSort) (wsψ := by aesop)) rfl l₂'
+      have l₄' : Γ ⊢ (C'.nest Cσ)[ψ] ⇒ (C'.nest Cσ)[φ ⋁ ψ] := @NestedContext.propagationDisjR.aux2 _ _ _ _ _ s t _ _ _ _ wsφ wsψ ((by rw [← compat]; simp)) (by assumption) l₁
+      have : WellSorted ((C'.nest Cσ)[φ]) t := by
         rw [NestedContext.nest_insert]
+        cases wsC
+        apply AppContext.well_sorted_insert (s := Cσ.holeSort) rfl (by assumption)
+      have : WellSorted ((C'.nest Cσ)[ψ]) t := by
         rw [NestedContext.nest_insert]
-        exact l₃
-      let l₂' : Γ ⊢ C'[ψ] ⇒ C'[φ ⋁ ψ] := (syllogism (s := Cσ.holeSort) (wsχ := by aesop)) (disjIntroRight (s := Cσ.holeSort)) l₁
-      let l₃' : Γ ⊢ Cσ.insert (C'[ψ]) ⇒ Cσ.insert (C'[φ ⋁ ψ]) := (Proof.framing (s := Cσ.holeSort) (wsψ := by aesop)) rfl l₂'
-      let l₄' : Γ ⊢ (C'.nest Cσ)[ψ] ⇒ (C'.nest Cσ)[φ ⋁ ψ] := l₃'
-      have : WellSorted ((C'.nest Cσ)[φ]) t := sorry
-      have : WellSorted ((C'.nest Cσ)[ψ]) t := sorry
-      have : WellSorted ((C'.nest Cσ)[φ ⋁ ψ]) t := sorry
+        cases wsC
+        apply AppContext.well_sorted_insert (s := Cσ.holeSort) rfl (by assumption)
+      have : WellSorted ((C'.nest Cσ)[φ ⋁ ψ]) t := by
+        rw [NestedContext.nest_insert]
+        cases wsC
+        apply AppContext.well_sorted_insert (s := Cσ.holeSort) rfl (by assumption)
       (disjIntroAtHyp (s := t)) l₄ l₄'
 
+  -- #exit
   def NestedContext.propagationExist {s t : S} {C : NestedContext sgn} {φ : Pattern sgn} {x : EVar S} (hnfv : ¬C.FreeEVar x)
     (wsφ : WellSorted φ s := by aesop)
     (wsC : C.WellSorted t := by aesop)
@@ -167,49 +226,57 @@ section ContextReasoning
     | .nest Cσ C' =>
       have not_fvχ : ¬Cσ.FreeEVar x := by aesop?
       let l₁ : Γ ⊢ (C'[∃∃ x φ]) ⇒ (∃∃ x (C'[φ])) := (propagationExist (s := s) (t := Cσ.holeSort) (wsC := by cases wsC; aesop)) (by aesop?) (by cases compat; aesop)
+      have : NestedContext.WellSorted C' (AppContext.holeSort Cσ) := by cases wsC; simp_all
       have : WellSorted (C'[∃∃ x φ]) Cσ.holeSort := by cases wsC; apply NestedContext.well_sorted_insert (s := s) C' (∃∃ x φ) (by aesop) (by aesop) (by cases compat; simp)
       have : WellSorted (C'[φ]) Cσ.holeSort := by cases wsC; apply NestedContext.well_sorted_insert (s := s) C' (φ) (by aesop) (by aesop) (by cases compat; simp)
       have : WellSorted (∃∃ x (C'[φ])) Cσ.holeSort := by cases wsC; rw [well_sorted_existential]; assumption
       let l₂ : Γ ⊢ Cσ.insert (C'[∃∃ x φ]) ⇒ Cσ.insert (∃∃ x (C'[φ])) := (Proof.framing (s := Cσ.holeSort)) rfl l₁
-      let l₃ : Γ ⊢ Cσ.insert (∃∃ x (C'[φ])) ⇒ (∃∃ x (Cσ.insert <| C'[φ])) := (Proof.propagationExist (s := Cσ.holeSort)) _ (by
+      let l₃ : Γ ⊢ Cσ.insert (∃∃ x (C'[φ])) ⇒ (∃∃ x (Cσ.insert <| C'[φ])) := (Proof.propagationExist (s := Cσ.holeSort)) rfl (by
         have : ¬Cσ.FreeEVar x := by aesop?
         apply AppContext.insert_not_free_evar
         . aesop -- exists_binds
         . assumption
       )
-      have : WellSorted (Cσ.insert (C'[∃∃ x φ])) t := sorry
-      have : WellSorted (Cσ.insert (∃∃ x (C'[φ]))) t := sorry
-      have : WellSorted (∃∃ x (Cσ.insert <| C'[φ])) t := sorry
+      have : WellSorted (Cσ.insert (C'[∃∃ x φ])) t := by
+        have : WellSorted (C'[∃∃ x φ]) Cσ.holeSort := by
+          apply NestedContext.well_sorted_insert (s := s) (t := Cσ.holeSort) C' _ (by assumption) (by simp_all) (by cases compat; simp_all)
+        apply AppContext.well_sorted_insert (C := Cσ) rfl this
+      have : WellSorted (Cσ.insert (∃∃ x (C'[φ]))) t := by
+        have : WellSorted (∃∃ x (C'[φ])) Cσ.holeSort := by simp_all
+        apply AppContext.well_sorted_insert (C := Cσ) rfl this
+      have : WellSorted (∃∃ x (Cσ.insert <| C'[φ])) t := by
+        have : WellSorted (AppContext.insert Cσ (C'[φ])) t := by
+          apply AppContext.well_sorted_insert (C := Cσ) rfl (by assumption)
+        simp_all
       let l₄ : Γ ⊢ Cσ.insert (C'[∃∃ x φ]) ⇒ (∃∃ x (Cσ.insert <| C'[φ])) := (syllogism (s := t)) l₂ l₃
       l₄
 
+-- #exit
+  -- def NestedContext.propagationExistR {C : NestedContext sgn} {φ : Pattern sgn} {x : EVar S} (hnfv : ¬C.FreeEVar x) :
+  --   Γ ⊢ (∃∃ x (C [φ])) ⇒ (C[∃∃ x φ]) :=
+  --   match h:C with
+  --   | .empty _ => implSelf (wsφ := by simp [NestedContext.insert, AppContext.insert])
+  --   | .nest Cσ C' =>
+  --     have not_fvEφ : ¬(∃∃ x φ).FreeEVar x := by aesop?
+  --     have not_fvCEφ : ¬((C'.nest Cσ)[∃∃ x φ]).FreeEVar x := by
+  --       -- rw [AppContext.no_free_occ_evar_insert]
+  --       -- exact And.intro not_fvEφ not_fv
+  --       rw [NestedContext.nest_insert]
+  --       apply AppContext.insert_not_free_evar
+  --       . simp at hnfv
+  --         push_neg at hnfv
+  --         sorry
+  --       . aesop
+  --     let l₁ : Γ ⊢ (∃∃ x (C'[φ])) ⇒ (C'[∃∃ x φ]) := propagationExistR (C := C') (by aesop?)
+  --     let l₂ : Γ ⊢ C'[φ][x ⇐ᵉ x] ⇒ ∃∃ x (C'[φ]) := existQuan <| Pattern.substitutable_evar_same _ _
+  --     let l₃ : Γ ⊢ C'[φ][x ⇐ᵉ x] ⇒ C'[∃∃ x φ] := syllogism l₂ l₁
+  --     -- let l₄ : Γ ⊢ (C'.substEvar x x)[φ[x ⇐ᵉ x]] ⇒ C'[∃∃ r x φ] := by
+  --     --   rw [AppContext.subst_evar_insert] at l₃ ; exact l₃
+  --     -- let l₄ : Γ ⊢ C'[φ[x ⇐ᵉ .evar x]] ⇒ C'[∃∃ x φ] := by rw [AppContext.subst_var_var_eq_self_evar] at l₄ ; exact l₄
+  --     let l₅ : Γ ⊢ C'[φ] ⇒ C'[∃∃ x φ] := by rw [Pattern.subst_var_var_eq_self_evar] at l₃ ; exact l₃ -- why did I do it so convoluted in the other formalization?
+  --     let l₆ : Γ ⊢ Cσ.insert (C'[φ]) ⇒ Cσ.insert (C'[∃∃ x φ]) := Proof.framing l₅
+  --     let l₇ : Γ ⊢ (C'.nest Cσ)[φ] ⇒ (C'.nest Cσ)[∃∃ x φ] := by simpa [*]
+  --     let l₉ : Γ ⊢ ∃∃ x ((C'.nest Cσ)[φ]) ⇒ (C'.nest Cσ)[∃∃ x φ] := existGen not_fvCEφ l₇
+  --     l₉
 
-  def NestedContext.propagationExistR {C : NestedContext sgn} {φ : Pattern sgn} {x : EVar S} (hnfv : ¬C.FreeEVar x) :
-    Γ ⊢ (∃∃ x (C [φ])) ⇒ (C[∃∃ x φ]) :=
-    match h:C with
-    | .empty => implSelf
-    | .nest Cσ C' =>
-      have not_fvEφ : ¬(∃∃ x φ).FreeEVar x := by aesop?
-      have not_fvCEφ : ¬((C'.nest Cσ)[∃∃ x φ]).FreeEVar x := by
-        -- rw [AppContext.no_free_occ_evar_insert]
-        -- exact And.intro not_fvEφ not_fv
-        rw [NestedContext.nest_insert]
-        apply AppContext.insert_not_free_evar
-        . simp at hnfv
-          push_neg at hnfv
-          sorry
-        . aesop
-      let l₁ : Γ ⊢ (∃∃ x (C'[φ])) ⇒ (C'[∃∃ x φ]) := propagationExistR (C := C') (by aesop?)
-      let l₂ : Γ ⊢ C'[φ][x ⇐ᵉ x] ⇒ ∃∃ x (C'[φ]) := existQuan <| Pattern.substitutable_evar_same _ _
-      let l₃ : Γ ⊢ C'[φ][x ⇐ᵉ x] ⇒ C'[∃∃ x φ] := syllogism l₂ l₁
-      -- let l₄ : Γ ⊢ (C'.substEvar x x)[φ[x ⇐ᵉ x]] ⇒ C'[∃∃ r x φ] := by
-      --   rw [AppContext.subst_evar_insert] at l₃ ; exact l₃
-      -- let l₄ : Γ ⊢ C'[φ[x ⇐ᵉ .evar x]] ⇒ C'[∃∃ x φ] := by rw [AppContext.subst_var_var_eq_self_evar] at l₄ ; exact l₄
-      let l₅ : Γ ⊢ C'[φ] ⇒ C'[∃∃ x φ] := by rw [Pattern.subst_var_var_eq_self_evar] at l₃ ; exact l₃ -- why did I do it so convoluted in the other formalization?
-      let l₆ : Γ ⊢ Cσ.insert (C'[φ]) ⇒ Cσ.insert (C'[∃∃ x φ]) := Proof.framing l₅
-      let l₇ : Γ ⊢ (C'.nest Cσ)[φ] ⇒ (C'.nest Cσ)[∃∃ x φ] := by simpa [*]
-      let l₉ : Γ ⊢ ∃∃ x ((C'.nest Cσ)[φ]) ⇒ (C'.nest Cσ)[∃∃ x φ] := existGen not_fvCEφ l₇
-      l₉
-
-  end Proof
 end ContextReasoning

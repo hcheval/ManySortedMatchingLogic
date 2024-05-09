@@ -9,6 +9,10 @@ variable {Symbol S : Type} [DecidableEq S] {sgn : Signature Symbol S}
 
 inductive Proof (Γ : Set <| Pattern sgn) :
   Pattern sgn → Type where
+| premise {φ : Pattern sgn} {s : S}
+  (wsφ : WellSorted φ s) :
+  φ ∈ Γ → Proof Γ φ
+
 | tautology {φ : Pattern sgn} {s : S}
   (is_tauto : Tautology φ)
   (wsφ : WellSorted φ s) :
